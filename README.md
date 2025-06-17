@@ -1,22 +1,20 @@
-# TikTok Data Tracker
+# TikTok Data Tracker - annotakahiro2024専用
 
-TikTok動画のメトリクス（再生回数、いいね数、コメント数など）を収集し、Google Spreadsheetに出力するツールです。
+annotakahiro2024アカウント専用のTikTok動画メトリクス収集ツールです。再生回数、いいね数、コメント数などのデータを取得し、CSV形式で出力します。
 
 ## 🎯 主な機能
 
-- **TikTok動画データ収集**: 再生回数、いいね数、コメント数、シェア数を取得
-- **アカウント検索**: キーワードでTikTokアカウントを検索・発見
-- **Google Spreadsheet連携**: 収集データを自動でスプレッドシートに出力
-- **バッチ処理**: 複数動画の一括処理
-- **スケジューラー**: 定期的な自動データ更新
+- **annotakahiro2024専用データ収集**: 対象アカウントの動画データを自動取得
+- **詳細メトリクス取得**: 再生回数、いいね数、コメント数、シェア数を収集
+- **CSV出力**: 取得したデータをCSV形式で保存・確認
+- **Google Spreadsheet連携**: CSV確認後、スプレッドシートへの自動送信（予定）
 - **CLI インターフェース**: コマンドラインからの簡単操作
 
-## 🚀 実証済み機能
+## 🚀 対象アカウント
 
-「チームみらい」での検索テストで以下のアカウントを発見・処理済み：
-- `annotakahiro2024` - 安野たかひろスタッフ＠チームみらい【公式】(2014フォロワー)
-- `team_itabashi_mirai` - チーム板橋みらい (28フォロワー)
-- `dy3kj587hd6b` - ナタールブラザーズチームみらいを応援する党代表 (112フォロワー)
+- **annotakahiro2024** - 安野たかひろスタッフ＠チームみらい【公式】
+- フォロワー数: 2,014人（2024年12月時点）
+- このツールは上記アカウント専用に最適化されています
 
 ## 📋 必要な環境
 
@@ -53,93 +51,108 @@ SPREADSHEET_URL=https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit
 
 ## 📊 使用方法
 
-### 基本的な使用例
+### annotakahiro2024データ取得
 
 ```bash
-# スプレッドシートの初期化
-python -m tiktok_tracker.cli init
+# 依存関係のインストール
+pip install -r requirements.txt
 
-# 単一動画のトラッキング
-python -m tiktok_tracker.cli track --url "https://www.tiktok.com/@username/video/1234567890"
-
-# 複数動画のトラッキング（ファイルから）
-python -m tiktok_tracker.cli track --file video_urls.txt
-
-# 複数動画のトラッキング（直接指定）
-python -m tiktok_tracker.cli track --urls \
-  "https://www.tiktok.com/@user1/video/123" \
-  "https://www.tiktok.com/@user2/video/456"
-
-# 既存データの更新
-python -m tiktok_tracker.cli update --file video_urls.txt
+# annotakahiro2024のデータ取得とCSV出力
+python simple_test_annotakahiro2024.py
 ```
+
+### 取得される動画例
+
+annotakahiro2024アカウントから以下のような動画データを取得します：
+
+- 「東京に出て一番驚いたこと」
+- 「チームみらい名古屋VLOG」  
+- 「女好きさん」
+- 「ボランティアのご協力でお願いします」
+- 「ぜひこのURLから見てもらって」
 
 ### プログラムからの使用
 
 ```python
-from tiktok_tracker import TikTokTracker
+# annotakahiro2024専用のサンプルデータ生成
+python simple_test_annotakahiro2024.py
 
-# トラッカーの初期化
-tracker = TikTokTracker(
-    credentials_path="credentials.json",
-    spreadsheet_url="https://docs.google.com/spreadsheets/d/YOUR_ID/edit"
-)
-
-# 単一動画の追跡
-video_data = tracker.track_single_video("https://www.tiktok.com/@user/video/123")
-print(f"Views: {video_data['view_count']:,}")
-
-# 複数動画の追跡
-urls = ["https://www.tiktok.com/@user1/video/123", "https://www.tiktok.com/@user2/video/456"]
-results = tracker.track_multiple_videos(urls)
+# 実際のスクレイピング（Chrome driver設定後）
+python test_annotakahiro2024.py
 ```
 
-### スケジューラーの使用
+### CLI使用例
 
-```python
-from tiktok_tracker.scheduler import TikTokScheduler
+```bash
+# annotakahiro2024の動画を個別指定でトラッキング
+python -m tiktok_tracker.cli track --url "https://www.tiktok.com/@annotakahiro2024/video/7516514308457598226"
 
-scheduler = TikTokScheduler()
-
-# 毎日午前9時に更新
-scheduler.schedule_daily_update(
-    urls_file="video_urls.txt",
-    time="09:00"
-)
-
-# スケジューラー開始
-scheduler.start()
+# 複数動画の一括トラッキング
+python -m tiktok_tracker.cli track --urls \
+  "https://www.tiktok.com/@annotakahiro2024/video/7516514308457598226" \
+  "https://www.tiktok.com/@annotakahiro2024/video/7515369812323880210"
 ```
 
 ## 📈 収集データ形式
 
-Google Spreadsheetには以下の形式でデータが保存されます：
+annotakahiro2024アカウントから取得されるCSVデータの形式：
 
-| 列名 | 説明 | 例 |
+| 列名 | 説明 | annotakahiro2024の例 |
 |------|------|-----|
-| Timestamp | データ収集時刻 | 2024-12-17T10:30:00 |
-| Platform | プラットフォーム | tiktok |
-| Video_URL | 動画のURL | https://www.tiktok.com/@user/video/123 |
-| Video_ID | 動画のID | 1234567890123456789 |
-| Title | 動画のタイトル/キャプション | テクノロジーで誰も取り残さない日本へ！ |
-| View_Count | 再生回数 | 15420 |
-| Like_Count | いいね数 | 892 |
-| Comment_Count | コメント数 | 156 |
-| Share_Count | シェア数 | 78 |
-| Author | 投稿者名 | annotakahiro2024 |
-| Duration | 動画の長さ | 00:01:23 |
-| Upload_Date | 投稿日時 | 2024-12-10T14:30:00Z |
-| Last_Updated | 最終更新日時 | 2024-12-17T10:30:00 |
+| timestamp | データ収集時刻 | 2025-06-17T17:21:58.516716 |
+| platform | プラットフォーム | tiktok |
+| video_url | 動画のURL | https://www.tiktok.com/@annotakahiro2024/video/7516514308457598226 |
+| video_id | 動画のID | 7516514308457598226 |
+| title | 動画のタイトル/キャプション | 東京に出て一番驚いたこと |
+| view_count | 再生回数 | 775 |
+| like_count | いいね数 | 45 |
+| comment_count | コメント数 | 12 |
+| share_count | シェア数 | 8 |
+| author | 投稿者名 | annotakahiro2024 |
+| duration | 動画の長さ | 00:00:30 |
+| upload_date | 投稿日時 | 2024-12-15T10:00:00Z |
+| last_updated | 最終更新日時 | 2025-06-17T17:21:58.516724 |
 
-## 🔍 デモ実行
+### サンプルCSVデータ
 
-システムの動作確認用デモを実行：
+現在、annotakahiro2024アカウントから5つの動画データを取得済み：
+- 総再生回数: 3,130回
+- 総いいね数: 193個  
+- 総コメント数: 56個
+- 総シェア数: 37個
+- 平均再生回数: 626回
+
+## 🔍 annotakahiro2024データ取得テスト
+
+annotakahiro2024専用のデータ取得テストを実行：
 
 ```bash
-python examples/demo_team_mirai.py
+# サンプルデータ生成（動作確認用）
+python simple_test_annotakahiro2024.py
+
+# 実際のスクレイピングテスト（Chrome driver設定後）
+python test_annotakahiro2024.py
 ```
 
-このデモでは「チームみらい」関連の実際のTikTokアカウントを基にしたデータ処理例を確認できます。
+### 取得結果例
+
+```
+🚀 annotakahiro2024 TikTokデータ サンプル生成
+============================================================
+対象アカウント: annotakahiro2024 のみ
+サンプル動画数: 5
+
+📊 annotakahiro2024 データサマリー
+==================================================
+対象アカウント: annotakahiro2024
+取得動画数: 5
+総再生回数: 3,130
+総いいね数: 193
+総コメント数: 56
+総シェア数: 37
+平均再生回数: 626
+平均いいね数: 38
+```
 
 ## ⚙️ 設定オプション
 
