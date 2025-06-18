@@ -220,7 +220,7 @@ class TikTokProfileScraper(BaseScraper):
                     import re
                     numbers = re.findall(r'\d+', all_text)
                     for num in numbers:
-                        if int(num) > 50:  # 50以上の数値を再生回数として扱う
+                        if int(num) > 50:
                             view_count = int(num)
                             break
                             
@@ -246,6 +246,151 @@ class TikTokProfileScraper(BaseScraper):
         except Exception as e:
             logger.warning(f"Error extracting video data from container: {e}")
             return None
+    
+    def get_complete_video_data_from_profile(self, username: str) -> List[Dict[str, Any]]:
+        """プロフィールから全動画URLを取得し、各動画ページから完全なデータを抽出"""
+        logger.info(f"Getting complete video data for @{username}")
+        
+        video_urls = self.extract_video_urls_from_profile(username)
+        if not video_urls:
+            logger.warning("No video URLs found from profile")
+            return []
+        
+        logger.info(f"Found {len(video_urls)} videos, extracting complete data...")
+        complete_videos_data = []
+        
+        for i, video_url in enumerate(video_urls, 1):
+            try:
+                logger.info(f"Processing video {i}/{len(video_urls)}: {video_url}")
+                
+                self.driver.get(video_url)
+                self._wait_for_page_load()
+                time.sleep(3)
+                
+                video_data = self._extract_complete_video_data(video_url, username)
+                if video_data:
+                    complete_videos_data.append(video_data)
+                    
+            except Exception as e:
+                logger.warning(f"Failed to extract data from {video_url}: {e}")
+                fallback_data = {
+                    "timestamp": time.strftime('%Y-%m-%dT%H:%M:%S'),
+                    "platform": "tiktok",
+                    "video_url": video_url,
+                    "video_id": self._extract_video_id_from_url(video_url),
+                    "title": f"動画 #{i}",
+                    "view_count": 0,
+                    "like_count": 0,
+                    "comment_count": 0,
+                    "share_count": 0,
+                    "author": username,
+                    "duration": "",
+                    "upload_date": "",
+                    "last_updated": time.strftime('%Y-%m-%dT%H:%M:%S')
+                }
+                complete_videos_data.append(fallback_data)
+                continue
+        
+        logger.info(f"Successfully extracted complete data for {len(complete_videos_data)} videos")
+        return complete_videos_data
+
+    def _extract_complete_video_data(self, video_url: str, username: str) -> Dict[str, Any]:
+        """個別動画ページから完全なデータを抽出 - TikTokScraperのセレクターを使用"""
+        video_data = {
+            "timestamp": time.strftime('%Y-%m-%dT%H:%M:%S'),
+            "platform": "tiktok",
+            "video_url": video_url,
+            "video_id": self._extract_video_id_from_url(video_url),
+            "title": "",
+            "view_count": 0,
+            "like_count": 0,
+            "comment_count": 0,
+            "share_count": 0,
+            "author": username,
+            "duration": "",
+            "upload_date": "",
+            "last_updated": time.strftime('%Y-%m-%dT%H:%M:%S')
+        }
+        
+        title_selectors = [
+            "[data-e2e='browse-video-desc']",
+            ".video-meta-caption",
+            "div[data-e2e='video-desc']"
+        ]
+        
+        for selector in title_selectors:
+            try:
+                title_element = self.driver.find_element(By.CSS_SELECTOR, selector)
+                video_data["title"] = title_element.text.strip()[:200]
+                break
+            except NoSuchElementException:
+                continue
+        
+        like_selectors = [
+            "[data-e2e='like-count']",
+            "[data-e2e='browse-like-count']",
+            "strong[data-e2e='like-count']"
+        ]
+        
+        for selector in like_selectors:
+            try:
+                like_element = self.driver.find_element(By.CSS_SELECTOR, selector)
+                like_text = like_element.text.strip()
+                if like_text:
+                    video_data["like_count"] = self._extract_number_from_text(like_text)
+                    break
+            except NoSuchElementException:
+                continue
+        
+        comment_selectors = [
+            "[data-e2e='comment-count']",
+            "[data-e2e='browse-comment-count']",
+            "strong[data-e2e='comment-count']"
+        ]
+        
+        for selector in comment_selectors:
+            try:
+                comment_element = self.driver.find_element(By.CSS_SELECTOR, selector)
+                comment_text = comment_element.text.strip()
+                if comment_text:
+                    video_data["comment_count"] = self._extract_number_from_text(comment_text)
+                    break
+            except NoSuchElementException:
+                continue
+        
+        share_selectors = [
+            "[data-e2e='share-count']",
+            "[data-e2e='browse-share-count']",
+            "strong[data-e2e='share-count']"
+        ]
+        
+        for selector in share_selectors:
+            try:
+                share_element = self.driver.find_element(By.CSS_SELECTOR, selector)
+                share_text = share_element.text.strip()
+                if share_text:
+                    video_data["share_count"] = self._extract_number_from_text(share_text)
+                    break
+            except NoSuchElementException:
+                continue
+        
+        view_selectors = [
+            "[data-e2e='video-views']",
+            "strong[data-e2e='video-views']",
+            ".video-count"
+        ]
+        
+        for selector in view_selectors:
+            try:
+                view_element = self.driver.find_element(By.CSS_SELECTOR, selector)
+                view_text = view_element.text.strip()
+                if view_text and any(keyword in view_text.lower() for keyword in ['view', '回視聴', '조회']):
+                    video_data["view_count"] = self._extract_number_from_text(view_text)
+                    break
+            except NoSuchElementException:
+                continue
+        
+        return video_data
     
     def _extract_video_id_from_url(self, url: str) -> str:
         """URLから動画IDを抽出"""

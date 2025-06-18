@@ -23,7 +23,7 @@ def collect_all_videos():
             print("📊 プロフィールページから動画データを取得中...")
             print("⏳ ページの読み込みとスクロールを実行中...")
             
-            videos_data = scraper.get_video_basic_data_from_profile("annotakahiro2024")
+            videos_data = scraper.get_complete_video_data_from_profile("annotakahiro2024")
             
             if not videos_data:
                 print("❌ 動画データが取得できませんでした")

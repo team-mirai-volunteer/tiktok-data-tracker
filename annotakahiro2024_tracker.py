@@ -22,7 +22,7 @@ def create_annotakahiro2024_csv():
     
     try:
         with TikTokProfileScraper() as scraper:
-            videos_data = scraper.get_video_basic_data_from_profile("annotakahiro2024")
+            videos_data = scraper.get_complete_video_data_from_profile("annotakahiro2024")
             
             if not videos_data:
                 print("❌ 動画データが取得できませんでした。サンプルデータを使用します。")
