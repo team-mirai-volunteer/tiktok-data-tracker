@@ -1,5 +1,6 @@
 import logging
 import time
+import os
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 from selenium import webdriver
@@ -27,16 +28,44 @@ class BaseScraper(ABC):
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--window-size=1920,1080")
-        chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option('useAutomationExtension', False)
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument("--disable-plugins")
+        chrome_options.add_argument("--disable-images")
+        chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36")
         
         try:
             if Config.CHROME_DRIVER_PATH:
                 service = Service(Config.CHROME_DRIVER_PATH)
             else:
-                service = Service(ChromeDriverManager().install())
+                system_chromedriver_paths = [
+                    '/usr/bin/chromedriver',
+                    '/usr/local/bin/chromedriver',
+                    '/snap/bin/chromium.chromedriver'
+                ]
+                
+                chromedriver_path = None
+                for path in system_chromedriver_paths:
+                    if os.path.exists(path):
+                        chromedriver_path = path
+                        logger.info(f"Using system chromedriver: {path}")
+                        break
+                
+                if chromedriver_path:
+                    service = Service(chromedriver_path)
+                else:
+                    logger.info("System chromedriver not found, trying webdriver-manager")
+                    service = Service(ChromeDriverManager().install())
                 
             self.driver = webdriver.Chrome(service=service, options=chrome_options)
             self.wait = WebDriverWait(self.driver, 10)
+            
+            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            self.driver.execute_script("Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]})")
+            self.driver.execute_script("Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']})")
+            
             logger.info("Chrome driver initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize Chrome driver: {e}")

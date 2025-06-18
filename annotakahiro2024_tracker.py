@@ -2,6 +2,7 @@
 """
 annotakahiro2024専用TikTokデータトラッカー
 対象アカウント: annotakahiro2024のみ
+全動画を実際にスクレイピングして取得
 """
 import sys
 import os
@@ -12,17 +13,45 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-ANNOTAKAHIRO2024_VIDEOS = [
-    "https://www.tiktok.com/@annotakahiro2024/video/7516514308457598226",
-    "https://www.tiktok.com/@annotakahiro2024/video/7515369812323880210", 
-    "https://www.tiktok.com/@annotakahiro2024/video/7509864881470934289",
-    "https://www.tiktok.com/@annotakahiro2024/video/7506527632561868040",
-    "https://www.tiktok.com/@annotakahiro2024/video/7506527186426268946"
-]
+from tiktok_tracker.scrapers.profile_scraper import TikTokProfileScraper
 
 def create_annotakahiro2024_csv():
-    """annotakahiro2024専用のCSVデータを生成"""
+    """annotakahiro2024の全動画を実際にスクレイピングしてCSVデータを生成"""
     
+    print("🚀 annotakahiro2024プロフィールから全動画を取得中...")
+    
+    try:
+        with TikTokProfileScraper() as scraper:
+            videos_data = scraper.get_video_basic_data_from_profile("annotakahiro2024")
+            
+            if not videos_data:
+                print("❌ 動画データが取得できませんでした。サンプルデータを使用します。")
+                return create_sample_data()
+            
+            print(f"✅ {len(videos_data)}本の動画を取得しました")
+            
+            csv_filename = f"annotakahiro2024_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            
+            headers = [
+                'timestamp', 'platform', 'video_url', 'video_id', 'title',
+                'view_count', 'like_count', 'comment_count', 'share_count',
+                'author', 'duration', 'upload_date', 'last_updated'
+            ]
+            
+            with open(csv_filename, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=headers)
+                writer.writeheader()
+                writer.writerows(videos_data)
+            
+            return csv_filename, videos_data
+            
+    except Exception as e:
+        print(f"❌ スクレイピングエラー: {e}")
+        print("サンプルデータを使用します。")
+        return create_sample_data()
+
+def create_sample_data():
+    """フォールバック用のサンプルデータ"""
     data = [
         {
             "timestamp": datetime.now().isoformat(),
@@ -101,7 +130,7 @@ def create_annotakahiro2024_csv():
         }
     ]
     
-    csv_filename = f"annotakahiro2024_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    csv_filename = f"annotakahiro2024_sample_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     
     headers = [
         'timestamp', 'platform', 'video_url', 'video_id', 'title',
