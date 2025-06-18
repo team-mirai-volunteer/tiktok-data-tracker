@@ -247,17 +247,19 @@ class TikTokProfileScraper(BaseScraper):
             logger.warning(f"Error extracting video data from container: {e}")
             return None
     
-    def get_complete_video_data_from_profile(self, username: str) -> List[Dict[str, Any]]:
-        """プロフィールから全動画URLを取得し、各動画ページから完全なデータを抽出"""
-        logger.info(f"Getting complete video data for @{username}")
+    def get_complete_video_data_from_profile_with_delays(self, username: str) -> tuple[List[Dict[str, Any]], int, int]:
+        """プロフィールから全動画URLを取得し、各動画ページから完全なデータを1秒delay付きで抽出"""
+        logger.info(f"Getting complete video data for @{username} with 1-second delays")
         
         video_urls = self.extract_video_urls_from_profile(username)
         if not video_urls:
             logger.warning("No video URLs found from profile")
-            return []
+            return [], 0, 0
         
-        logger.info(f"Found {len(video_urls)} videos, extracting complete data...")
+        logger.info(f"Found {len(video_urls)} videos, extracting complete data with 1-second delays...")
         complete_videos_data = []
+        success_count = 0
+        error_count = 0
         
         for i, video_url in enumerate(video_urls, 1):
             try:
@@ -265,20 +267,34 @@ class TikTokProfileScraper(BaseScraper):
                 
                 self.driver.get(video_url)
                 self._wait_for_page_load()
-                time.sleep(3)
+                time.sleep(1)  # 1秒delay
                 
                 video_data = self._extract_complete_video_data(video_url, username)
                 if video_data:
                     complete_videos_data.append(video_data)
                     
+                    if (video_data.get('title', '').strip() or 
+                        video_data.get('like_count', 0) > 0 or 
+                        video_data.get('comment_count', 0) > 0 or 
+                        video_data.get('share_count', 0) > 0):
+                        success_count += 1
+                        logger.info(f"✅ Video {i} extraction successful")
+                    else:
+                        error_count += 1
+                        logger.warning(f"❌ Video {i} extraction failed - no meaningful data")
+                else:
+                    error_count += 1
+                    logger.warning(f"❌ Video {i} extraction failed - no data returned")
+                    
             except Exception as e:
-                logger.warning(f"Failed to extract data from {video_url}: {e}")
+                error_count += 1
+                logger.warning(f"❌ Failed to extract data from {video_url}: {e}")
                 fallback_data = {
                     "timestamp": time.strftime('%Y-%m-%dT%H:%M:%S'),
                     "platform": "tiktok",
                     "video_url": video_url,
                     "video_id": self._extract_video_id_from_url(video_url),
-                    "title": f"動画 #{i}",
+                    "title": f"動画 #{i} (エラー)",
                     "view_count": 0,
                     "like_count": 0,
                     "comment_count": 0,
@@ -290,9 +306,12 @@ class TikTokProfileScraper(BaseScraper):
                 }
                 complete_videos_data.append(fallback_data)
                 continue
+            
+            if i < len(video_urls):
+                time.sleep(1)
         
-        logger.info(f"Successfully extracted complete data for {len(complete_videos_data)} videos")
-        return complete_videos_data
+        logger.info(f"Extraction complete: {success_count} successful, {error_count} errors out of {len(video_urls)} total")
+        return complete_videos_data, success_count, error_count
 
     def _extract_complete_video_data(self, video_url: str, username: str) -> Dict[str, Any]:
         """個別動画ページから完全なデータを抽出 - TikTokScraperのセレクターを使用"""
